@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    // Menampilkan halaman Register
+    // halaman Register
     public function showRegister() {
         return view('auth.register');
     }
 
-    // Proses pendaftaran pengguna
+    // proses pendaftaran 
     public function register(Request $request) {
         $validated = $request->validate([
         'name' => 'required|string|max:255',
@@ -53,7 +53,7 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
-    // proses Login pengguna
+    // proses Login 
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -80,7 +80,7 @@ class AuthController extends Controller
             ->onlyInput('email');
     }
 
-    // proses Logout pengguna
+    // proses Logout 
     public function logout(Request $request)
     {
         Auth::logout();
