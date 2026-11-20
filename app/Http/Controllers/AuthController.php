@@ -26,7 +26,7 @@ class AuthController extends Controller
         ],
         'phone' => 'required|string|max:20',
         'password' => 'required|string|min:8|confirmed',
-        'role' => 'required|in:donatur,penerima',
+
     ], [
         'email.regex' => 'Email harus menggunakan domain kampus .ac.id.',
         'email.unique' => 'Email sudah terdaftar.',
