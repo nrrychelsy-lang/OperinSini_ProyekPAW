@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Rules\EmailKampus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,36 +16,35 @@ class AuthController extends Controller
 
     // Proses pendaftaran pengguna
     public function register(Request $request) {
-        $validated = $request->validate([
-        'name' => 'required|string|max:255',
+        $data = $request->validate ([
+        'name' => ['required', 'string', 'max:100'],
         'email' => [
             'required',
             'email',
-            'max:255',
+            'max:150',
             'unique:users,email',
-            'regex:/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.ac\.id$/i',
+            new EmailKampus
         ],
-        'phone' => 'required|string|max:20',
-        'password' => 'required|string|min:8|confirmed',
-        'role' => 'required|in:donatur,penerima',
+        'phone' => ['required', 'string', 'max:20'],
+        'password' => ['required', 'string', 'min:8'],
     ], [
-        'email.regex' => 'Email harus menggunakan domain kampus .ac.id.',
         'email.unique' => 'Email sudah terdaftar.',
-        'phone.required' => 'Nomor WhatsApp wajib diisi.',
-        'password.confirmed' => 'Konfirmasi password tidak cocok.',
+        'phone.regex' => 'Nomor WhatsApp tidak valid (contoh: 081234567890).',
         'password.min' => 'Password minimal 8 karakter.',
     ]);
 
-    $user = User::create($validated);
+    $user = User::create ([
+            'name' => $data['name'],
+            'email' => strtolower($data['email']),
+            'phone' => $data['phone'],
+            'password' => $data['password'],
+            'role' => 'mahasiswa',            // ditetapkan sistem, bukan dari form
+    ]);
 
     Auth::login($user);
     $request->session()->regenerate();
 
-    return redirect('/catalog')->with(
-        'success',
-        'Registrasi berhasil! Selamat datang di OperinSini.'
-    );
-
+    return redirect()->route('catalog.index')->with('success', 'Akun berhasil dibuat. Selamat datang!');
     }
 
     //  halaman Login
@@ -56,28 +56,21 @@ class AuthController extends Controller
     // proses Login pengguna
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => [
-                'required',
-                'email',
-                'regex:/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.ac\.id$/i',
-            ],
-            'password' => 'required|string',
-        ], [
-            'email.regex' => 'Gunakan email kampus dengan domain .ac.id.',
-        ]);
+        $data = $request->validate([
+            'email' => ['required',  'email', new EmailKampus],
+            'password' => ['required'],
+        ]); 
+        $ok = Auth::attempt(
+            ['email' => strtolower($data['email']), 'password' => $data['password']],
+            $request->boolean('remember')
+        );
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
-            $request->session()->regenerate();
-
-            return redirect()->intended('/catalog');
+        if (! $ok) {
+            return back()->withErrors(['email' => 'Email atau password salah.'])->onlyInput('email');
         }
 
-        return back()
-            ->withErrors([
-                'email' => 'Email atau password yang dimasukkan salah.',
-            ])
-            ->onlyInput('email');
+        $request->session()->regenerate();
+        return redirect()->route(Auth::user()->homeRoute());
     }
 
     // proses Logout pengguna
@@ -88,7 +81,6 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/login')
-            ->with('success', 'Kamu berhasil logout.');
+        return redirect()->route('/login');
     }
 }
